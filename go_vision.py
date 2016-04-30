@@ -2,33 +2,46 @@
 
 import numpy as np
 import cv2
-from cv import Canny
-from cv import Smooth
-from cv import HoughCircles
-from cv import GetPerspectiveTransform
-from cv import WarpPerspective
+from cv2 import Canny
+from cv2 import bilateralFilter
+from cv2 import HoughCircles
+from cv2 import GetPerspectiveTransform
+from cv2 import WarpPerspective
 
 
 class Board(object):
+    '''
+    Go board class.
+    Takes numpy img array as input.
+    '''
     def __init__(self, img):
         self.img = img
+        self.stones = []
         self.white = []
         self.black = []
         self.import_board()
 
     def orient_board(self):
+        '''Morphs the perspective of the board to a square.'''
         # harris corner detector?
         # GetPerspectiveTransform
         # WarpPerspective
+        pass
+
+    def board_lines(self):
+        pass
 
     def import_board(self):
         #orient_board()
         #self.white, self.black = find_stones()
         # 
-        # pass
+        pass
 
     # Finds stones in image
     def find_stones(self):
+        img2 = np.empty(self.img.shape, 'uint8')
+        bilateralFilter(self.img, img2, 9, 75, 75) 
+        self.stones = HoughCircles(img2, CV_HOUGH_GRADIENT, 2, img2.shape[1]/21)
         # canny?
         # smooth?
         # houghcircles?
@@ -36,7 +49,8 @@ class Board(object):
 
     # Checks color of a given stone
     def stone_color():
-        pass
+        for stone in self.stones:
+            pass
 
 def show_webcam(mirror=False):
     cam = cv2.VideoCapture(0)
