@@ -113,20 +113,15 @@ class Board(object):
         mask2 = cv2.inRange(sag, 140, 255)
 
         self.blackrange = cv2.bitwise_not(sag)
-        #self.blackrange = cv2.bitwise_and(self.blackrange, self.blackrange, mask=mask1)
-        #self.blackrange = cv2.bitwise_and(self.alignedgray, sag, mask=mask1)
-        #self.blackrange = cv2.erode(self.blackrange,kernel,iterations=2)
-        #self.blackrange = cv2.dilate(self.blackrange,kernel,iterations=2)
-        #self.blackrange = cv2.equalizeHist(self.blackrange)
-        #self.blackrange = cv2.bitwise_not(self.blackrange, self.blackrange)
         ret, self.blackrange = cv2.threshold(self.blackrange, 210, 255, 0)
+        self.blackrange = cv2.erode(self.blackrange,kernel,iterations=1)
 
+        #self.whiterange = cv2.bitwise_and(sag, sag, mask=mask2)
+        ret, self.whiterange = cv2.threshold(sag, 135, 255, 0)
+        self.whiterange = cv2.erode(self.whiterange,kernel,iterations=1)
 
-        self.whiterange = cv2.bitwise_and(sag, sag, mask=mask2)
-        ret, self.whiterange = cv2.threshold(self.whiterange, 140, 255, 0)
-
-        self.black = cv2.HoughCircles(self.blackrange,cv2.HOUGH_GRADIENT,1,16,param1=30,param2=5,minRadius=7,maxRadius=11) 
-        self.white = cv2.HoughCircles(self.whiterange,cv2.HOUGH_GRADIENT,1,16,param1=30,param2=5,minRadius=7,maxRadius=11)
+        self.black = cv2.HoughCircles(self.blackrange,cv2.HOUGH_GRADIENT,1,16,param1=30,param2=7,minRadius=5,maxRadius=13) 
+        self.white = cv2.HoughCircles(self.whiterange,cv2.HOUGH_GRADIENT,1,16,param1=30,param2=6,minRadius=5,maxRadius=13)
 
         '''
         self.stones = cv2.HoughCircles(self.alignedgray, cv2.HOUGH_GRADIENT, 2, 
