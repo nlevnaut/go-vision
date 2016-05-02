@@ -114,14 +114,14 @@ class Board(object):
 
         self.blackrange = cv2.bitwise_not(sag)
         ret, self.blackrange = cv2.threshold(self.blackrange, 210, 255, 0)
-        self.blackrange = cv2.erode(self.blackrange,kernel,iterations=1)
+        self.blackrange = cv2.erode(self.blackrange,kernel,iterations=2)
 
         #self.whiterange = cv2.bitwise_and(sag, sag, mask=mask2)
-        ret, self.whiterange = cv2.threshold(sag, 135, 255, 0)
-        self.whiterange = cv2.erode(self.whiterange,kernel,iterations=1)
+        ret, self.whiterange = cv2.threshold(sag, 137, 255, 0)
+        self.whiterange = cv2.erode(self.whiterange,kernel,iterations=2)
 
-        self.black = cv2.HoughCircles(self.blackrange,cv2.HOUGH_GRADIENT,1,16,param1=30,param2=7,minRadius=5,maxRadius=13) 
-        self.white = cv2.HoughCircles(self.whiterange,cv2.HOUGH_GRADIENT,1,16,param1=30,param2=6,minRadius=5,maxRadius=13)
+        self.black = cv2.HoughCircles(self.blackrange,cv2.HOUGH_GRADIENT,1,16,param1=30,param2=7,minRadius=4,maxRadius=13) 
+        self.white = cv2.HoughCircles(self.whiterange,cv2.HOUGH_GRADIENT,1,16,param1=30,param2=7,minRadius=4,maxRadius=13)
 
         '''
         self.stones = cv2.HoughCircles(self.alignedgray, cv2.HOUGH_GRADIENT, 2, 
@@ -175,8 +175,8 @@ def main():
         print("You didn't actually pass an image, dumbass")
 
     board = Board(img)
-    cv2.imshow('resized image', board.img)
-    cv2.imshow('thresholded image', board.thresh)
+    #cv2.imshow('resized image', board.img)
+    #cv2.imshow('thresholded image', board.thresh)
     cv2.imshow('aligned image', board.aligned)
     cv2.imshow('black image', board.blackrange)
     cv2.imshow('white image', board.whiterange)
