@@ -9,8 +9,7 @@ from cv2 import getPerspectiveTransform
 from cv2 import warpPerspective
 from cv2 import cornerHarris
 from cv2 import imread, imshow, waitKey, destroyAllWindows
-
-
+from math import floor
 
 class Board(object):
     '''
@@ -20,8 +19,10 @@ class Board(object):
     def __init__(self, img):
         self.img = img
         self.stones = []
-        self.white = []
-        self.black = []
+        self.white = np.array((2,2))
+        self.black = np.array((2,2))
+        self.positions = []
+        self.moves = 0
         self.import_board()
 
     def read(self, filename):
@@ -35,14 +36,13 @@ class Board(object):
         Morphs the perspective of the board to a square.
         Result stored in self.aligned.
         '''
-        board_contour = None
         # Smooth and histogram equalize before thresholding
-        self.smooth = cv2.bilateralFilter(self.gray, 3, 20, 20)
+        self.smooth = cv2.bilateralFilter(self.gray, 5, 20, 20)
         #self.equalized = cv2.equalizeHist(self.gray)
 
         # Threshold and then detect contours, to get board
         #ret, self.thresh = cv2.threshold(self.equalized, 114, 255, 0)
-        self.thresh = cv2.adaptiveThreshold(self.smooth, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, 11, 1)
+        self.thresh = cv2.adaptiveThreshold(self.smooth, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, 3, 1)
         #kernel = np.ones((5,5),np.uint8)
         #self.ethresh = cv2.erode(self.thresh,kernel,iterations=1)
         im2, contours, hier = cv2.findContours(self.thresh.copy(), cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
@@ -75,8 +75,8 @@ class Board(object):
 
         # take the maximum of the width and height values to reach
         # our final dimensions
-        max_width = max(int(widthA), int(widthB))
-        max_height = max(int(heightA), int(heightB))
+        max_width = max(int(widthA), int(widthB)) + 25
+        max_height = max(int(heightA), int(heightB)) + 25
 
         dst = np.array(
             [[0,0],
@@ -95,14 +95,8 @@ class Board(object):
     def board_lines(self):
         pass
 
-    def find_white(self):
-        pass
-
     # Finds stones in image
     def find_stones(self):
-        #stoneimg = np.empty(self.aligned.shape, 'uint8')
-        #bilateralFilter(self.img, img2, 9, 75, 75) 
-
         # Smooth, aligned gray image
         sag = cv2.bilateralFilter(self.alignedgray, 3, 20, 20)
 
@@ -114,40 +108,66 @@ class Board(object):
 
         self.blackrange = cv2.bitwise_not(sag)
         ret, self.blackrange = cv2.threshold(self.blackrange, 210, 255, 0)
-        self.blackrange = cv2.erode(self.blackrange,kernel,iterations=2)
+        self.blackrange = cv2.erode(self.blackrange,kernel,iterations=1)
 
         #self.whiterange = cv2.bitwise_and(sag, sag, mask=mask2)
-        ret, self.whiterange = cv2.threshold(sag, 137, 255, 0)
-        self.whiterange = cv2.erode(self.whiterange,kernel,iterations=2)
+        ret, self.whiterange = cv2.threshold(sag, 135, 255, 0)
+        self.whiterange = cv2.erode(self.whiterange,kernel,iterations=1)
 
-        self.black = cv2.HoughCircles(self.blackrange,cv2.HOUGH_GRADIENT,1,16,param1=30,param2=7,minRadius=4,maxRadius=13) 
-        self.white = cv2.HoughCircles(self.whiterange,cv2.HOUGH_GRADIENT,1,16,param1=30,param2=7,minRadius=4,maxRadius=13)
+        self.black = cv2.HoughCircles(self.blackrange,cv2.HOUGH_GRADIENT,1,16,param1=30,param2=7,minRadius=4,maxRadius=13)[0] 
+        self.white = cv2.HoughCircles(self.whiterange,cv2.HOUGH_GRADIENT,1,16,param1=30,param2=7,minRadius=4,maxRadius=13)[0]
 
-        '''
-        self.stones = cv2.HoughCircles(self.alignedgray, cv2.HOUGH_GRADIENT, 2, 
-                                        minDist=int(self.aligned.shape[1]/38),
-                                        #minRadius=int(self.aligned.shape[1]/42), 
-                                        #maxRadius=int(self.aligned.shape[1]/3))
-        '''
-        return
+    def circle_pos(self, circle, color):
+        # grid spacing
+        gsp = 16
+        # margins
+        marg = 20
+        horiz = ['a','b','c','d','e','f','g','h','i','j','k',
+                'l','m','n','o','p','q','r','s']
+        verti = horiz
+        # verti = ['19', '18', '17', '16', '15', '14', '13', '12', '11', 
+        #         '10', '9', '8', '7', '6', '5', '4', '3', '2', '1']
+        
+        cpos = []
+        i1 = floor(((circle[0])/376)*19+0.5)-1
+        i2 = floor(((circle[1])/376)*19+0.5)-1
+        if i1 < 0:
+            i1 = 0
+        elif i1 > 18:
+            i1 = 18
+        if i2 < 0:
+            i2 = 0
+        elif i2 > 18:
+            i2 = 18
+        print(i1, i2)
+        cpos.append(color)
+        cpos.append(horiz[i1])
+        cpos.append(verti[i2])
+        return tuple(cpos)
 
     def import_board(self):
         self.img = cv2.resize(self.img, (500,500))
         self.gray = cv2.cvtColor(self.img, cv2.COLOR_BGR2GRAY)
         self.align_board()
         self.find_stones()
-        for i in self.white[0,:]:
+        for i in self.white:
+            self.positions.append(self.circle_pos(i, 'W'))
             cv2.circle(self.aligned, (i[0],i[1]),i[2],(0,255,0),1)
             cv2.circle(self.aligned, (i[0],i[1]),2,(0,0,255),2)
 
-        for i in self.black[0,:]:
+        for i in self.black:
+            self.positions.append(self.circle_pos(i, 'B'))
             cv2.circle(self.aligned, (i[0],i[1]),i[2],(255,0,0),1)
             cv2.circle(self.aligned, (i[0],i[1]),2,(0,255,0),2)
 
-    # Checks color of a given stone
-    def stone_color():
-        for stone in self.stones:
-            pass
+        self.boardstring = ''
+        count = 1
+        for p in self.positions:
+            self.moves += 1
+            self.boardstring += ';' + p[0] + '[' + p[1] + p[2] + ']'
+            if count % 11 == 0:
+                self.boardstring += '\n'
+            count += 1
 
 def show_webcam(mirror=False):
     cam = cv2.VideoCapture(0)
@@ -175,11 +195,13 @@ def main():
         print("You didn't actually pass an image, dumbass")
 
     board = Board(img)
+    print('(;GM[1]FF[4]\nSZ[19]\nGN[go-vision 1.0]\nKM[0.0]HA[0]RU[Japanese]AP[GNU Go:3.8]')
+    print(board.boardstring + ')')
     #cv2.imshow('resized image', board.img)
     #cv2.imshow('thresholded image', board.thresh)
     cv2.imshow('aligned image', board.aligned)
-    cv2.imshow('black image', board.blackrange)
-    cv2.imshow('white image', board.whiterange)
+    #cv2.imshow('black image', board.blackrange)
+    #cv2.imshow('white image', board.whiterange)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
 
