@@ -150,15 +150,16 @@ class Board(object):
         self.gray = cv2.cvtColor(self.img, cv2.COLOR_BGR2GRAY)
         self.align_board()
         self.find_stones()
+        self.circleimg = self.aligned.copy()
         for i in self.white:
             self.positions.append(self.circle_pos(i, 'W'))
-            cv2.circle(self.aligned, (i[0],i[1]),i[2],(0,255,0),1)
-            cv2.circle(self.aligned, (i[0],i[1]),2,(0,0,255),2)
+            cv2.circle(self.circleimg, (i[0],i[1]),i[2],(0,255,0),1)
+            cv2.circle(self.circleimg, (i[0],i[1]),2,(0,0,255),2)
 
         for i in self.black:
             self.positions.append(self.circle_pos(i, 'B'))
-            cv2.circle(self.aligned, (i[0],i[1]),i[2],(255,0,0),1)
-            cv2.circle(self.aligned, (i[0],i[1]),2,(0,255,0),2)
+            cv2.circle(self.circleimg, (i[0],i[1]),i[2],(255,0,0),1)
+            cv2.circle(self.circleimg, (i[0],i[1]),2,(0,255,0),2)
 
         self.boardstring = ''
         count = 1
@@ -192,16 +193,27 @@ def main():
         print("Something bad happened")
         exit()
     if img == None:
-        print("You didn't actually pass an image, dumbass")
+        print("You didn't actually pass an image")
 
     board = Board(img)
     print('(;GM[1]FF[4]\nSZ[19]\nGN[go-vision 1.0]\nKM[0.0]HA[0]RU[Japanese]AP[GNU Go:3.8]')
     print(board.boardstring + ')')
-    #cv2.imshow('resized image', board.img)
-    #cv2.imshow('thresholded image', board.thresh)
+    cv2.imshow('resized image', board.img)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
+    cv2.imshow('thresholded image', board.thresh)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
     cv2.imshow('aligned image', board.aligned)
-    #cv2.imshow('black image', board.blackrange)
-    #cv2.imshow('white image', board.whiterange)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
+    cv2.imshow('black image', board.blackrange)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
+    cv2.imshow('white image', board.whiterange)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
+    cv2.imshow('circle image', board.circleimg)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
 
