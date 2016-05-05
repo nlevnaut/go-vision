@@ -54,13 +54,16 @@ class Board(object):
                 hull = cv2.convexHull(cnt)
                 hull = cv2.approxPolyDP(hull, 0.1*cv2.arcLength(hull, True), True)
                 if len(hull == 4):
-                    board_contour = hull
+                    self.board_contour = hull
 
-        points = board_contour.reshape(4,2)
+        # This perspective warp is based off the pokedex tutorial at pyimagesearch.com.
+        points = self.board_contour.reshape(4,2)
         rect = np.zeros((4,2), dtype='float32')
+        # Get top-left and bottom-right points of rectangle.
         sumpts = points.sum(axis=1)
         rect[0] = points[np.argmin(sumpts)]
         rect[2] = points[np.argmax(sumpts)]
+        # Get top-right and bottom-left points of rectangle.
         diffpts = np.diff(points, axis=1)
         rect[1] = points[np.argmin(diffpts)]
         rect[3] = points[np.argmax(diffpts)]
@@ -78,14 +81,14 @@ class Board(object):
         max_width = max(int(widthA), int(widthB)) + 25
         max_height = max(int(heightA), int(heightB)) + 25
 
-        dst = np.array(
+        dest = np.array(
             [[0,0],
              [max_width-1,0],
              [max_width-1,max_height-1],
              [0,max_height-1]],
             dtype = 'float32')
 
-        M = cv2.getPerspectiveTransform(rect, dst)
+        M = cv2.getPerspectiveTransform(rect, dest)
         self.aligned = cv2.warpPerspective(self.img, M, (max_width, max_height))
         self.aligned = cv2.resize(self.aligned,(400,400))
         self.alignedgray = cv2.cvtColor(self.aligned, cv2.COLOR_BGR2GRAY)
@@ -108,29 +111,29 @@ class Board(object):
 
         self.blackrange = cv2.bitwise_not(sag)
         ret, self.blackrange = cv2.threshold(self.blackrange, 210, 255, 0)
-        self.blackrange = cv2.erode(self.blackrange,kernel,iterations=1)
+        self.blackrange = cv2.erode(self.blackrange,kernel,iterations=3)
+        self.blackrange = cv2.dilate(self.blackrange,kernel,iterations=3)
 
         #self.whiterange = cv2.bitwise_and(sag, sag, mask=mask2)
         ret, self.whiterange = cv2.threshold(sag, 135, 255, 0)
-        self.whiterange = cv2.erode(self.whiterange,kernel,iterations=1)
+        self.whiterange = cv2.erode(self.whiterange,kernel,iterations=2)
+        self.whiterange = cv2.dilate(self.whiterange,kernel,iterations=2)
 
         self.black = cv2.HoughCircles(self.blackrange,cv2.HOUGH_GRADIENT,1,16,param1=30,param2=7,minRadius=4,maxRadius=13)[0] 
         self.white = cv2.HoughCircles(self.whiterange,cv2.HOUGH_GRADIENT,1,16,param1=30,param2=7,minRadius=4,maxRadius=13)[0]
 
     def circle_pos(self, circle, color):
-        # grid spacing
-        gsp = 16
         # margins
-        marg = 20
+        marg = 23
+        # image size
+        imgsize = 400
         horiz = ['a','b','c','d','e','f','g','h','i','j','k',
                 'l','m','n','o','p','q','r','s']
         verti = horiz
-        # verti = ['19', '18', '17', '16', '15', '14', '13', '12', '11', 
-        #         '10', '9', '8', '7', '6', '5', '4', '3', '2', '1']
         
         cpos = []
-        i1 = floor(((circle[0])/376)*19+0.5)-1
-        i2 = floor(((circle[1])/376)*19+0.5)-1
+        i1 = floor(((circle[0])/(imgsize-marg))*19+0.5)-1
+        i2 = floor(((circle[1])/(imgsize-marg))*19+0.5)-1
         if i1 < 0:
             i1 = 0
         elif i1 > 18:
@@ -200,22 +203,19 @@ def main():
     print(board.boardstring + ')')
     cv2.imshow('resized image', board.img)
     cv2.waitKey(0)
-    cv2.destroyAllWindows()
     cv2.imshow('thresholded image', board.thresh)
     cv2.waitKey(0)
-    cv2.destroyAllWindows()
+    cv2.drawContours(board.img, [board.board_contour], -1, (0, 255, 0), 3)
+    cv2.imshow("Game Boy Screen", board.img)
+    cv2.waitKey(0)
     cv2.imshow('aligned image', board.aligned)
     cv2.waitKey(0)
-    cv2.destroyAllWindows()
     cv2.imshow('black image', board.blackrange)
     cv2.waitKey(0)
-    cv2.destroyAllWindows()
     cv2.imshow('white image', board.whiterange)
     cv2.waitKey(0)
-    cv2.destroyAllWindows()
     cv2.imshow('circle image', board.circleimg)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
-
 if __name__ == '__main__':
     main()
