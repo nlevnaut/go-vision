@@ -36,15 +36,11 @@ class Board(object):
         Morphs the perspective of the board to a square.
         Result stored in self.aligned.
         '''
-        # Smooth and histogram equalize before thresholding
+        # Smooth before thresholding
         self.smooth = cv2.bilateralFilter(self.gray, 5, 20, 20)
-        #self.equalized = cv2.equalizeHist(self.gray)
 
         # Threshold and then detect contours, to get board
-        #ret, self.thresh = cv2.threshold(self.equalized, 114, 255, 0)
         self.thresh = cv2.adaptiveThreshold(self.smooth, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, 3, 1)
-        #kernel = np.ones((5,5),np.uint8)
-        #self.ethresh = cv2.erode(self.thresh,kernel,iterations=1)
         im2, contours, hier = cv2.findContours(self.thresh.copy(), cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
 
         for cnt in contours:
@@ -94,12 +90,11 @@ class Board(object):
         self.alignedgray = cv2.cvtColor(self.aligned, cv2.COLOR_BGR2GRAY)
         return
 
-
-    def board_lines(self):
-        pass
-
-    # Finds stones in image
     def find_stones(self):
+        '''
+        Finds stones in thresholded black and white images.
+        Results stored in self.black and self.white.
+        '''
         # Smooth, aligned gray image
         sag = cv2.bilateralFilter(self.alignedgray, 3, 20, 20)
 
@@ -123,6 +118,10 @@ class Board(object):
         self.white = cv2.HoughCircles(self.whiterange,cv2.HOUGH_GRADIENT,1,16,param1=30,param2=7,minRadius=4,maxRadius=13)[0]
 
     def circle_pos(self, circle, color):
+        '''
+        Returns the coordinates of a circle, using SGF notation.
+        Currently only works for 19x19 boards.
+        '''
         # margins
         marg = 23
         # image size
@@ -132,6 +131,7 @@ class Board(object):
         verti = horiz
         
         cpos = []
+        # Find the index for both horizontal and vertical components of the circle.
         i1 = floor(((circle[0])/(imgsize-marg))*19+0.5)-1
         i2 = floor(((circle[1])/(imgsize-marg))*19+0.5)-1
         if i1 < 0:
@@ -142,18 +142,25 @@ class Board(object):
             i2 = 0
         elif i2 > 18:
             i2 = 18
-        print(i1, i2)
         cpos.append(color)
         cpos.append(horiz[i1])
         cpos.append(verti[i2])
         return tuple(cpos)
 
+    # Align the board and find stones. Save SGF moves to self.boardstring.
     def import_board(self):
+        '''
+        Imports a go board, stored a self.img.
+        Calls align_board() and find_stones(), then generates an image with
+        circles drawn where they were detected in the original.
+        '''
         self.img = cv2.resize(self.img, (500,500))
         self.gray = cv2.cvtColor(self.img, cv2.COLOR_BGR2GRAY)
         self.align_board()
         self.find_stones()
         self.circleimg = self.aligned.copy()
+
+        # Draw circles on the original image.
         for i in self.white:
             self.positions.append(self.circle_pos(i, 'W'))
             cv2.circle(self.circleimg, (i[0],i[1]),i[2],(0,255,0),1)
@@ -164,6 +171,7 @@ class Board(object):
             cv2.circle(self.circleimg, (i[0],i[1]),i[2],(255,0,0),1)
             cv2.circle(self.circleimg, (i[0],i[1]),2,(0,255,0),2)
 
+        # Save SGF string
         self.boardstring = ''
         count = 1
         for p in self.positions:
@@ -172,17 +180,6 @@ class Board(object):
             if count % 11 == 0:
                 self.boardstring += '\n'
             count += 1
-
-def show_webcam(mirror=False):
-    cam = cv2.VideoCapture(0)
-    while True:
-        ret_val, img = cam.read()
-        if mirror:
-            img = cv2.flip(img, 1)
-        cv2.imshow('webcam', img)
-        if cv2.waitKey(1) == 27:
-            break
-    cv2.destroyAllWindows()
 
 def main():
     try:
